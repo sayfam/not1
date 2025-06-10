@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Note's</title>
+
+	<link rel="icon" href="lock.png" type="image/png" />
+    <!-- Google API Platform kütüphanesi -->
+    <script src="https://apis.google.com/js/api.js"></script>
+
+    <style>
+        body {
+            background-color: #1e1e2f;
+            color: #ffffff;
+            font-family: "Courier New", Courier, monospace;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0px 15px;
+        }
+
+        h2, h3 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        input, button {
+            font-family: "Courier New", Courier, monospace;
+            font-size: 16px;
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: none;
+            border-radius: 5px;
+        }
+
+        input {
+            background-color: #2a2a40;
+            color: #fff;
+            border: 1px solid #444;
+        }
+
+        button {
+            background-color: #03a9f4;
+            color: white;
+            transition: background 0.3s ease;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0288d1;
+        }
+
+        #guncelleBtn {
+            background-color: #8bc34a;
+        }
+
+        #guncelleBtn:hover {
+            background-color: #689f38;
+        }
+
+        #kayitListesi {
+            margin-top: 30px;
+            border-top: 1px solid #555;
+            padding-top: 15px;
+        } 
+		#kayitListesi  button{
+            margin-top: 10px;
+            border-top: 1px solid #555;
+		
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .listeSatiri {
+            background-color: #2a2a40;
+            border: 1px solid #444;
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .listeSatiri span {
+            flex-grow: 1;
+            word-break: break-word;
+        }
+
+        .listeSatiri .butonGrubu {
+            flex-direction: column;
+            display: flex;
+            gap: 6px;
+        }
+
+        .listeSatiri button {
+            font-size: 13px;
+            padding: 6px 10px;
+            border-radius: 4px;
+            border: none;
+            width: 80px;
+            cursor: pointer;
+        }
+
+        .listeSatiri .duzenleBtn {
+            background-color: #f57c00;
+            color: white;
+        }
+
+        .listeSatiri .duzenleBtn:hover {
+            background-color: #ef6c00;
+        }
+
+        .listeSatiri .silBtn {
+            background-color: #e53935;
+            color: white;
+        }
+
+        .listeSatiri .silBtn:hover {
+            background-color: #c62828;
+        }
+
+        .logoutBtn {
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+          
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+            float: right;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .logoutBtn:hover {
+            background-color: #7b1fa2;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        #notPopup {
+          display: none;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          background: #ffffff;
+          color: #000;
+          padding: 20px;
+          border-radius: 10px;
+          box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+          z-index: 999;
+          width: 90%;
+          max-width: 500px;
+        }
+
+        #notMetni {
+          width: 90%;
+          height: 200px;
+          padding: 12px;
+          border-radius: 8px;
+          border: 1px solid #ccc;
+          font-size: 14px;
+          resize: vertical;
+        }
+
+        .popup-buttons {
+          margin-top: 10px;
+          display: flex;
+          justify-content: space-between;
+        }
+
+        .popup-buttons button {
+          padding: 10px 20px;
+          font-size: 14px;
+          border: none;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+
+        .saveBtn {
+          background-color: #27ae60;
+          color: white;
+        }
+
+        .cancelBtn {
+          background-color: #e74c3c;
+          color: white;
+        }
+
+        body.popup-acik::before {
+          content: "";
+          position: fixed;
+          top: 0; left: 0; bottom: 0; right: 0;
+          background-color: rgba(0, 0, 0, 0.4);
+          z-index: 998;
+        }
+
+        .uc-lu {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+        }
+
+        .aramaKutusu {
+            flex: 1; /* Tüm boşluğu kaplasın */
+            position: relative;
+        }
+        #kelimeBul {
+          flex: 1 1 80%;
+          padding: 8px;
+          font-size: 16px;
+        }
+        .temizleBtn {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          cursor: pointer;
+          font-size: 14px;
+          color: #999;
+          display: none;
+        }
+        #notEkleBtn {
+          flex: 0 0 10%;
+          padding: 8px;
+          font-size: 16px;
+          cursor: pointer;
+        }
+
+        .logoutBtn {
+          flex: 0 0 10%;
+          padding: 8px;
+          font-size: 16px;
+          cursor: pointer;
+        }
+        #notEkleBtn:hover {
+            background-color: #7b1fa2;
+            transform: scale(1.05);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        #notBaslik {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .temizleBtn  {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          cursor: pointer;
+          font-size: 14px;
+          color: #999;
+          display: none; /* Başlangıçta gizli */
+        }
+
+        .header-container {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+          position: relative;
+        }
+
+        .dropdown {
+          position: relative;
+          display: inline-block;
+        }
+
+        .dropdown-btn {
+          background-color: #4a6fa5;
+          color: white;
+          padding: 8px 15px;
+          border: none;
+          border-radius: 5px;
+          cursor: pointer;
+          font-family: "Courier New", Courier, monospace;
+          transition: all 0.3s;
+        }
+
+        .dropdown-btn:hover {
+          background-color: #3a5a80;
+        }
+
+        .dropdown-content {
+          display: none;
+          position: absolute;
+          right: 0;
+          background-color: #2a2a40;
+          min-width: 160px;
+          box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+          z-index: 1;
+          border-radius: 5px;
+          border: 1px solid #444;
+        }
+
+        .dropdown-content a {
+          color: #fff;
+          padding: 12px 16px;
+          text-decoration: none;
+          display: block;
+          font-size: 14px;
+        }
+
+        .dropdown-content a:hover {
+          background-color: #3a3a5a;
+        }
+
+        .show { display: block; }
+
+        /* SweetAlert özelleştirmeleri */
+        .swal2-popup {
+          background: #2a2a40 !important;
+          color: #fff !important;
+        }
+
+        .swal2-input, .swal2-textarea {
+          background: #1e1e2f !important;
+          color: #fff !important;
+          border: 1px solid #444 !important;
+        }
+
+        .swal2-textarea {
+          height: 100px;
+          resize: vertical;
+        }
+
+        /* Ayarlar paneli için özel buton stilleri */
+        .settings-button {
+            width: 100%;
+            margin-bottom: 10px !important;
+            text-align: center;
+            display: inline-block;
+            font-size: 16px;
+            padding: 10px;
+        }
+        .drive-backup-btn {
+            background-color: #4285F4 !important;
+        }
+        .drive-restore-btn {
+            background-color: #34A853 !important;
+        }
+        .delete-all-btn {
+             background-color: #e53935 !important;
+        }
+
+    </style>
+</head>
+<body>
+
+ <!-- Giriş Yapma Ekranı -->
+<div id="loginSection">
+    <h2>Giriş Yap</h2>
+    <input type="email" id="emailInput" placeholder="Email">
+    <input type="password" id="passwordInput" placeholder="Şifre">
+    <button onclick="login()">Giriş Yap</button>
+    <p>Hesabınız yok mu? <a href="javascript:void(0);" onclick="showSignup()">Kayıt ol</a></p>
+</div>
+
+<!-- Kayıt Olma Ekranı -->
+<div id="signupSection" style="display:none;">
+    <h2>Kayıt Ol</h2>
+    <input type="email" id="signupEmail" placeholder="Email">
+    <input type="password" id="signupPassword" placeholder="Şifre">
+    <button onclick="signup()">Kayıt Ol</button>
+    <p>Hesabınız var mı? <a href="javascript:void(0);" onclick="showLogin()">Giriş yap</a></p>
+    <p id="signupMessage" style="color: #8bc34a; display: none;">Kayıt oluşturuldu, giriş yapın.</p>
+</div>
+
+  <!-- İçerik Bölümü -->
+<div id="kayitListesi" style="display:none;">
+    <p id="hosgeldinYazi" style="text-align:center; margin-top: 10px; font-weight: bold;"></p>
+    <h5 id="notBaslik">Note's</h5>
+
+    <div class="uc-lu">
+        <button class="logoutBtn" onclick="logout()" title="Çıkış">🔓</button>
+       <div class="aramaKutusu">
+        <input type="text" id="kelimeBul" placeholder="Ara">
+       <span class="temizleBtn" onclick="temizleInput()">❌</span>
+    </div>
+      <button id="notEkleBtn" title="Not Ekleyin...">📝</button>
+      
+    <div class="dropdown">
+            <button class="dropdown-btn">☰ Menü</button>
+            <div class="dropdown-content">
+                <a href="#" id="iletisimAc">📩 İletişim</a>
+                <a href="#" id="ayarlarAc">⚙️ Ayarlar</a>
+                <a href="#" id="yardimAc">❓ Yardım</a>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Not Popup Kutusu -->
+    <div id="notPopup">
+        <h3 style="margin-top: 0;">Notlarım</h3>
+        <textarea id="notMetni" placeholder="Notlarınızı buraya yazın..."></textarea>
+        <div  class="popup-buttons">
+          <button  class="saveBtn" onclick="notKaydet()">Kaydet</button>
+          <button class="cancelBtn" onclick="popupKapat()">İptal</button>
+        </div>
+    </div>
+
+    <div style="text-align:center; margin: 24px 0; color: #aaa;">✧ ✦ ✧</div>
+
+    <!-- 3 adet input alanı -->
+    <div class="content-inbtn" >
+        <input  type="text" id="isimInput" placeholder="Bilgi Giriniz...">
+        <input  type="text" id="soyadInput" placeholder="Bilgi Giriniz...">
+        <input  type="text" id="telefonInput" placeholder="Bilgi Giriniz...">
+
+        <button  id="kaydetBtn" onclick="isimKaydet()">➕ Kaydet</button>
+        <button  id="guncelleBtn" onclick="isimGuncelle()" style="display:none;">✔ Güncelle</button>
+        <button  id="vazgecBtn" style="display: none;">✖ Vazgeç</button>
+    </div>
+
+    <h3>	✍️ Size Ait Notlar</h3>
+    <ul id="isimlerListesi"></ul>
+</div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
+   <script>
+    // Firebase konfigürasyonu
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWj53RpZd_xcWGD-ZLIyXBYz8H9MehM7Y",
+            authDomain: "dosya01-7a585.firebaseapp.com",
+            databaseURL: "https://dosya01-7a585-default-rtdb.firebaseio.com",
+            projectId: "dosya01-7a585",
+            storageBucket: "dosya01-7a585.firebasestorage.app",
+            messagingSenderId: "502419176600",
+            appId: "1:502419176600:web:d4304f2a0bfc30d03ce4ed"
+        };
+        firebase.initializeApp(firebaseConfig);
+
+        let currentEditKey = null;
+		
+		let sessionTimeout = null;
+
+		function baslatOturumZamani() {
+		    if (sessionTimeout) clearTimeout(sessionTimeout);
+		    sessionTimeout = setTimeout(() => {
+		        firebase.auth().signOut().then(() => {
+		            Swal.fire({
+		                icon: 'info',
+		                title: 'Oturum Süresi Doldu',
+		                text: 'Lütfen tekrar giriş yapın.',
+		                confirmButtonText: 'Tamam',
+                        customClass: { popup: 'swal2-popup' }
+		            }).then(() => {
+		                document.getElementById('loginSection').style.display = "block";
+		                document.getElementById('kayitListesi').style.display = "none";
+		                document.getElementById('signupSection').style.display = "none";
+		                document.getElementById('emailInput').value = "";
+		                document.getElementById('passwordInput').value = "";
+		            });
+		        });
+		    }, 30 * 60 * 1000); // 30 dakika
+		}
+
+        function signup() {
+            const email = document.getElementById('signupEmail').value;
+            const password = document.getElementById('signupPassword').value;
+
+            firebase.auth().createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    console.log("Kayıt başarılı: ", user.uid);
+                    document.getElementById('signupMessage').style.display = "block";
+                    setTimeout(() => {
+                        showLogin();
+                    }, 2000);
+                })
+                .catch((error) => {
+                    alert("Hata: " + error.message);
+                });
+        }
+
+        function login() {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+
+            firebase.auth().signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    const user = userCredential.user;
+                    console.log("Giriş başarılı: ", user.uid);
+                    showContent(user.uid);
+                    document.getElementById('hosgeldinYazi').textContent = `Hoş geldiniz, ${user.email}`;
+					baslatOturumZamani();
+
+                    document.getElementById('loginSection').style.display = "none";
+                    document.getElementById('signupSection').style.display = "none";
+                })
+                .catch((error) => {
+                    alert("Hata: " + error.message);
+                });
+        }
+
+        function isimKaydet() {
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                Swal.fire({ text: 'Lütfen önce giriş yapın!', confirmButtonText: 'Tamam', customClass: { popup: 'swal2-popup' } });
+                return;
+            }
+
+            const ad = document.getElementById('isimInput').value.trim();
+            const soyad = document.getElementById('soyadInput').value.trim();
+            const telefon = document.getElementById('telefonInput').value.trim();
+
+            if (ad === "" && soyad === "" && telefon === "") {
+                Swal.fire({ text: 'Lütfen en az bir alanı doldurun!', confirmButtonText: 'Tamam', customClass: { popup: 'swal2-popup' } });
+                return;
+            }
+
+            firebase.database().ref('kayitlar/' + user.uid).push({
+                ad: ad,
+                soyad: soyad,
+                telefon: telefon,
+                tarih: new Date().toISOString()
+            }).then(() => {
+                document.getElementById('isimInput').value = "";
+                document.getElementById('soyadInput').value = "";
+                document.getElementById('telefonInput').value = "";
+            }).catch(error => {
+                console.error("Kayıt hatası:", error);
+            });
+        }
+
+        function showContent(uid) {
+            const userRef = firebase.database().ref('kayitlar/' + uid);
+            userRef.off(); // Önceki dinleyiciyi kaldır
+            
+            userRef.on('value', (snapshot) => {
+                const isimler = snapshot.val();
+                const isimlerListesi = document.getElementById('isimlerListesi');
+                isimlerListesi.innerHTML = "";
+                
+                if (isimler) {
+                    const sortedKeys = Object.keys(isimler).sort((a,b) => new Date(isimler[b].tarih) - new Date(isimler[a].tarih));
+                    
+                    for (const key of sortedKeys) {
+                        const li = document.createElement('li');
+                        li.classList.add('listeSatiri');
+                        li.innerHTML = `
+                            <div>
+                                <span>${isimler[key].ad || ''}</span><br>
+                                <span>${isimler[key].soyad || ''}</span><br>
+                                <span>${isimler[key].telefon || ''}</span>
+                            </div>
+                            <div class="butonGrubu">
+                                <button class="duzenleBtn" onclick="guncelle('${key}', '${isimler[key].ad || ''}', '${isimler[key].soyad || ''}', '${isimler[key].telefon || ''}')">Düzenle</button>
+                                <button class="silBtn" onclick="sil('${key}')">Sil</button>
+                            </div>
+                        `;
+                        isimlerListesi.appendChild(li);
+                    }
+                }
+            });
+            
+            document.getElementById('kayitListesi').style.display = "block";
+            document.getElementById("kelimeBul").focus();
+        }
+		
+        function sil(key) {
+            const user = firebase.auth().currentUser;
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu kaydı silmek üzeresiniz!",
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Evet, sil!',
+                cancelButtonText: 'İptal',
+                customClass: { popup: 'swal2-popup' }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    firebase.database().ref('kayitlar/' + user.uid + '/' + key).remove()
+                        .then(() => {
+                            Swal.fire({ title: 'Silindi!', text: 'Kayıt başarıyla silindi.', icon: 'success', customClass: { popup: 'swal2-popup' }});
+                        })
+                        .catch((error) => {
+                            Swal.fire({ title: 'Hata!', text: 'Kayıt silinirken bir sorun oluştu.', icon: 'error', customClass: { popup: 'swal2-popup' }});
+                            console.error(error);
+                        });
+                }
+            });
+        }
+
+        function guncelle(key, ad, soyad, telefon) {
+            currentEditKey = key;
+            document.getElementById('isimInput').value = ad;
+            document.getElementById('soyadInput').value = soyad;
+            document.getElementById('telefonInput').value = telefon;
+            document.getElementById('guncelleBtn').style.display = "block";
+            document.getElementById('vazgecBtn').style.display = "inline-block";
+            document.getElementById('kaydetBtn').style.display = "none";
+            document.getElementById('guncelleBtn').onclick = () => {
+                isimGuncelle(key);
+            };
+        }
+
+        function isimGuncelle(key) {
+            const user = firebase.auth().currentUser;
+            const yeniAd = document.getElementById('isimInput').value.trim();
+            const yeniSoyad = document.getElementById('soyadInput').value.trim();
+            const yeniTelefon = document.getElementById('telefonInput').value.trim();
+
+           if (yeniAd === "" && yeniSoyad === "" && yeniTelefon === "") {
+                Swal.fire({ text: 'Lütfen en az bir alanı doldurun!', confirmButtonText: 'Tamam', customClass: { popup: 'swal2-popup' } });
+                return;
+            }
+
+            firebase.database().ref('kayitlar/' + user.uid + '/' + key).update({
+                ad: yeniAd,
+                soyad: yeniSoyad,
+                telefon: yeniTelefon
+            }).then(() => {
+                document.getElementById('guncelleBtn').style.display = "none";
+                document.getElementById('vazgecBtn').style.display = "none";
+                document.getElementById('kaydetBtn').style.display = "block";
+                document.getElementById('isimInput').value = "";
+                document.getElementById('soyadInput').value = "";
+                document.getElementById('telefonInput').value = "";
+                currentEditKey = null;
+                Swal.fire({ icon: 'success', title: 'Güncellendi!', confirmButtonText: 'Tamam', customClass: { popup: 'swal2-popup' } });
+            }).catch((error) => {
+                Swal.fire({ icon: 'error', title: 'Hata!', confirmButtonText: 'Tamam', customClass: { popup: 'swal2-popup' } });
+                console.error(error);
+            });
+        }
+        
+        document.getElementById('vazgecBtn').addEventListener('click', () => {
+            document.getElementById('isimInput').value = "";
+            document.getElementById('soyadInput').value = "";
+            document.getElementById('telefonInput').value = "";
+            document.getElementById('guncelleBtn').style.display = "none";
+            document.getElementById('vazgecBtn').style.display = "none";
+            document.getElementById('kaydetBtn').style.display = "inline-block";
+            currentEditKey = null;
+        });
+
+        function logout() {
+            const user = firebase.auth().currentUser;
+            if (user) {
+                firebase.database().ref('kayitlar/' + user.uid).off();
+            }
+            firebase.auth().signOut().then(() => {
+                document.getElementById('loginSection').style.display = "block";
+                document.getElementById('kayitListesi').style.display = "none";
+                document.getElementById('signupSection').style.display = "none";
+                document.getElementById('emailInput').value = "";
+                document.getElementById('passwordInput').value = "";
+            }).catch((error) => {
+                console.error("Çıkış yapılamadı: ", error);
+            });
+        }
+
+        function showSignup() {
+            document.getElementById('signupSection').style.display = "block";
+            document.getElementById('loginSection').style.display = "none";
+        }
+
+        function showLogin() {
+            document.getElementById('loginSection').style.display = "block";
+            document.getElementById('signupSection').style.display = "none";
+        }
+        
+        document.getElementById("kelimeBul").addEventListener("input", function () {
+            const arama = this.value.toLowerCase();
+            const liste = document.querySelectorAll("#isimlerListesi li");
+            liste.forEach(function (li) {
+                const metin = li.textContent.toLowerCase();
+                if (metin.includes(arama)) {
+                    li.style.display = "flex";
+                } else {
+                    li.style.display = "none";
+                }
+            });
+        });
+        
+        document.getElementById("notEkleBtn").addEventListener("click", () => {
+            document.getElementById("notPopup").style.display = "block";
+            document.body.classList.add("popup-acik");
+            notGetir();
+            document.getElementById("notMetni").focus();
+        });
+
+        function popupKapat() {
+            document.getElementById("notPopup").style.display = "none";
+            document.body.classList.remove("popup-acik");
+            document.getElementById("notMetni").value = "";
+        }
+ 
+        document.addEventListener('click', baslatOturumZamani);
+        document.addEventListener('keydown', baslatOturumZamani);
+
+        document.addEventListener("DOMContentLoaded", function () {
+            const kelimeInput = document.getElementById('kelimeBul');
+            const temizleBtn = document.querySelector('.temizleBtn');
+
+            kelimeInput.addEventListener('input', function () {
+              temizleBtn.style.display = this.value.trim() !== "" ? "block" : "none";
+            });
+
+            window.temizleInput = function () {
+              kelimeInput.value = "";
+              temizleBtn.style.display = "none";
+              kelimeInput.focus();
+              kelimeInput.dispatchEvent(new Event('input'));
+            };
+        });
+	
+        function notGetir() {
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+            firebase.database().ref('notlar/' + user.uid + '/not').once('value')
+            .then(snapshot => {
+                const data = snapshot.val();
+                document.getElementById("notMetni").value = (data && data.metin) ? data.metin : '';
+            }).catch(error => console.error("Not getirilemedi:", error));
+        }
+
+        function notKaydet() {
+            const metin = document.getElementById("notMetni").value.trim();
+            const user = firebase.auth().currentUser;
+            if (!user) return Swal.fire({ text: 'Lütfen önce giriş yapın!', customClass: { popup: 'swal2-popup' } });
+            if (metin.length === 0) return Swal.fire({ text: 'Lütfen bir not yazın!', customClass: { popup: 'swal2-popup' } });
+
+            firebase.database().ref('notlar/' + user.uid + '/not').set({
+                metin: metin,
+                tarih: new Date().toISOString()
+            }).then(() => {
+                Swal.fire({ icon: 'success', title: 'Not kaydedildi!', showConfirmButton: false, timer: 1500, customClass: { popup: 'swal2-popup' } });
+                popupKapat();
+            }).catch((error) => {
+                console.error("Not kaydedilemedi:", error);
+                Swal.fire({ icon: 'error', title: 'Hata!', text: 'Not kaydedilirken bir sorun oluştu', customClass: { popup: 'swal2-popup' } });
+            });
+        }
+
+        emailjs.init('VCwxBwdvT-HFnnKZ0');
+
+        // --- GOOGLE DRIVE YEDEKLEME KODLARI BAŞLANGICI ---
+        const CLIENT_ID = '344034966705-8paqve5db6002isrh7ahjk6s2e1ps4ob.apps.googleusercontent.com';
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+        let googleAuthInstance;
+
+        // Google API istemcisini ve kimlik doğrulamasını başlat
+        function handleClientLoad() {
+            gapi.load('client:auth2', initClient);
+        }
+
+        function initClient() {
+            gapi.client.init({
+                clientId: CLIENT_ID,
+                scope: SCOPES
+            }).then(() => {
+                googleAuthInstance = gapi.auth2.getAuthInstance();
+            }).catch(err => {
+                console.error("API İstemci başlatma hatası:", err);
+            });
+        }
+
+        // Sayfa yüklendiğinde Google istemcisini başlat
+        handleClientLoad();
+
+        function signInGoogle(callback) {
+            if (!googleAuthInstance) {
+                Swal.fire('Hata', 'Google API henüz hazır değil, lütfen biraz bekleyip tekrar deneyin.', 'error');
+                return;
+            }
+            
+            if (googleAuthInstance.isSignedIn.get()) {
+                callback();
+            } else {
+                googleAuthInstance.signIn().then(callback).catch(err => {
+                    Swal.fire('Giriş Hatası', 'Google hesabınıza giriş yapılamadı.', 'error');
+                    console.error("Google oturum açma hatası:", err);
+                });
+            }
+        }
+
+        // Yedekleme fonksiyonu (hem notları hem de kayıtları yedekler)
+        function yedekleDrive() {
+            const user = firebase.auth().currentUser;
+            if (!user) return Swal.fire('Giriş gerekli', 'Lütfen önce uygulamaya giriş yapın.', 'warning');
+
+            signInGoogle(() => {
+                Swal.fire({
+                    title: 'Yedekleniyor...',
+                    text: 'Verileriniz Google Drive\'a yükleniyor, lütfen bekleyin.',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                const kayitlarRef = firebase.database().ref('kayitlar/' + user.uid);
+                const notlarRef = firebase.database().ref('notlar/' + user.uid);
+
+                Promise.all([
+                    kayitlarRef.once('value'),
+                    notlarRef.once('value')
+                ]).then(snapshots => {
+                    const backupData = {
+                        kayitlar: snapshots[0].val() || {},
+                        notlar: snapshots[1].val() || {}
+                    };
+
+                    const jsonBlob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+                    const fileName = `NotUygulamasi_Yedek_${new Date().toISOString().split('T')[0]}.json`;
+
+                    const metadata = {
+                        'name': fileName,
+                        'mimeType': 'application/json',
+                        'parents': ['appDataFolder']
+                    };
+
+                    const form = new FormData();
+                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    form.append('file', jsonBlob);
+
+                    const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+
+                    fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                        method: 'POST',
+                        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                        body: form
+                    }).then(res => {
+                        if(res.ok) return res.json();
+                        throw new Error('Yükleme başarısız.');
+                    }).then(() => {
+                        Swal.fire('Başarılı', 'Yedek başarıyla Google Drive’a yüklendi.', 'success');
+                    }).catch(error => {
+                        Swal.fire('Hata', 'Yedekleme sırasında bir sorun oluştu.', 'error');
+                        console.error(error);
+                    });
+                });
+            });
+        }
+
+        // Geri yükleme fonksiyonu
+        function driveYedektenYukle() {
+            const user = firebase.auth().currentUser;
+            if (!user) return Swal.fire('Giriş gerekli', 'Lütfen önce uygulamaya giriş yapın.', 'warning');
+            
+            signInGoogle(() => {
+                Swal.fire({
+                    title: 'Yedek Aranıyor...',
+                    text: 'Google Drive\'daki en son yedeğiniz aranıyor.',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+                
+                gapi.client.load('drive', 'v3', () => {
+                    gapi.client.drive.files.list({
+                        'q': 'name contains "NotUygulamasi_Yedek"',
+                        'spaces': 'appDataFolder',
+                        'fields': 'files(id, name)',
+                        'orderBy': 'createdTime desc',
+                        'pageSize': 1
+                    }).then(res => {
+                        const files = res.result.files;
+                        if (!files || files.length === 0) {
+                            return Swal.fire('Bulunamadı', 'Google Drive\'da uygulama yedeği bulunamadı.', 'info');
+                        }
+
+                        const fileId = files[0].id;
+                        
+                        Swal.update({
+                            title: 'Yedek İndiriliyor...',
+                            text: 'Yedek dosyası indiriliyor ve verileriniz güncellenecek.'
+                        });
+
+                        return gapi.client.drive.files.get({
+                            fileId: fileId,
+                            alt: 'media'
+                        });
+
+                    }).then(res => {
+                        if (!res) return;
+                        const backupData = res.result;
+                        Swal.fire({
+                            title: 'Emin misiniz?',
+                            text: "Mevcut verileriniz silinecek ve yedekten gelen verilerle değiştirilecek!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonText: 'Evet, geri yükle!',
+                            cancelButtonText: 'İptal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const kayitlarRef = firebase.database().ref('kayitlar/' + user.uid);
+                                const notlarRef = firebase.database().ref('notlar/' + user.uid);
+                                
+                                Promise.all([
+                                    kayitlarRef.set(backupData.kayitlar || {}),
+                                    notlarRef.set(backupData.notlar || {})
+                                ]).then(() => {
+                                   Swal.fire('Başarılı!', 'Verileriniz yedekten başarıyla geri yüklendi.', 'success');
+                                }).catch(err => {
+                                    Swal.fire('Hata', 'Veriler geri yüklenirken bir sorun oluştu.', 'error');
+                                });
+                            }
+                        });
+
+                    }).catch(err => {
+                        console.error("Drive'dan yükleme hatası:", err);
+                        Swal.fire('Hata', 'Yedek geri yüklenirken bir sorun oluştu.', 'error');
+                    });
+                });
+            });
+        }
+        // --- GOOGLE DRIVE YEDEKLEME KODLARI SONU ---
+	
+        document.querySelector('.dropdown-btn').addEventListener('click', function() {
+          document.querySelector('.dropdown-content').classList.toggle('show');
+        });
+
+        window.addEventListener('click', function(e) {
+          if (!e.target.matches('.dropdown-btn')) {
+            document.querySelector('.dropdown-content').classList.remove('show');
+          }
+        });
+
+        function iletisimFormuGoster() {
+          Swal.fire({
+            title: '📬 Bize Ulaşın',
+            html:
+              '<input id="swal-ad" class="swal2-input" placeholder="Adınız">' +
+              '<input id="swal-email" class="swal2-input" placeholder="E-posta" type="email">' +
+              '<textarea id="swal-mesaj" class="swal2-textarea" placeholder="Mesajınız..."></textarea>',
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Gönder',
+            cancelButtonText: 'İptal',
+            customClass: { popup: 'swal2-popup' },
+            preConfirm: () => ({
+                ad: document.getElementById('swal-ad').value,
+                email: document.getElementById('swal-email').value,
+                mesaj: document.getElementById('swal-mesaj').value
+            })
+          }).then((result) => {
+            if (result.isConfirmed) {
+              const params = {
+                name: result.value.ad,
+                email: result.value.email,
+                message: result.value.mesaj,
+                time: new Date().toLocaleString('tr-TR')
+              };
+              emailjs.send("service_8ofb079","template_80rg1o1",params)
+                .then(() => Swal.fire({title: 'Başarılı!', text: 'Mesajınız gönderildi', icon: 'success', customClass: { popup: 'swal2-popup' }}))
+                .catch((error) => Swal.fire({title: 'Hata!', text: 'Mesaj gönderilemedi: ' + error.text, icon: 'error', customClass: { popup: 'swal2-popup' }}));
+            }
+          });
+        }
+
+        function ayarlarFormuGoster() {
+            const user = firebase.auth().currentUser;
+            if (!user) {
+                Swal.fire('Hata', 'Ayarları görüntülemek için giriş yapmalısınız.', 'error');
+                return;
+            }
+
+            Swal.fire({
+                title: '⚙️ Ayarlar',
+                html: `
+                    <div style="text-align: left; padding: 10px;">
+                        <p style="margin-bottom: 20px; font-size: 16px; text-align:center;">Veri Yönetimi</p>
+                        <button id="driveYedekleBtn" class="swal2-confirm swal2-styled settings-button drive-backup-btn">💾 Drive’a Yedekle</button>
+                        <button id="driveGeriYukleBtn" class="swal2-confirm swal2-styled settings-button drive-restore-btn">⏬ Drive'dan Geri Yükle</button>
+                        
+                        <hr style="border-color: #444; margin: 25px 0;">
+
+                        <p style="margin-bottom: 5px; text-align:center;"><strong>Tehlikeli Bölge</strong></p>
+                        <p style="font-size: 14px; color: #ccc; margin-top:0;">Bu işlem geri alınamaz.</p>
+                        <button id="tumVerileriSilBtn" class="swal2-confirm swal2-styled settings-button delete-all-btn">
+                        🗑️ Tüm Notları Sil
+                        </button>
+                    </div>
+                `,
+                showConfirmButton: false,
+                showCancelButton: true,
+                cancelButtonText: 'Kapat',
+                customClass: {
+                    popup: 'swal2-popup',
+                },
+                didOpen: () => {
+                    document.getElementById('driveYedekleBtn').addEventListener('click', () => yedekleDrive());
+                    document.getElementById('driveGeriYukleBtn').addEventListener('click', () => driveYedektenYukle());
+                    
+                    document.getElementById('tumVerileriSilBtn').addEventListener('click', () => {
+                        Swal.fire({
+                            title: 'Emin misiniz?',
+                            text: "Tüm notlarınız kalıcı olarak silinecek. Bu işlem geri alınamaz!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#d33',
+                            cancelButtonColor: '#3085d6',
+                            confirmButtonText: 'Evet, hepsini sil!',
+                            cancelButtonText: 'İptal',
+                            customClass: { popup: 'swal2-popup' }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                const user = firebase.auth().currentUser;
+                                if (user) {
+                                    const kullaniciNotlariRef = firebase.database().ref('kayitlar/' + user.uid);
+                                    const kullaniciOzelNotRef = firebase.database().ref('notlar/' + user.uid);
+
+                                    Promise.all([
+                                        kullaniciNotlariRef.remove(),
+                                        kullaniciOzelNotRef.remove()
+                                    ]).then(() => {
+                                        Swal.fire({ title:'Silindi!', text:'Tüm verileriniz başarıyla silindi.', icon:'success', customClass: { popup: 'swal2-popup' }});
+                                    }).catch((error) => {
+                                        Swal.fire({ title: 'Hata!', text: 'Veriler silinirken bir sorun oluştu.', icon: 'error', customClass: { popup: 'swal2-popup' } });
+                                    });
+                                }
+                            }
+                        });
+                    });
+                }
+            });
+        }
+        
+        document.getElementById('iletisimAc').addEventListener('click', function(e) {
+          e.preventDefault();
+          iletisimFormuGoster();
+        });
+
+        document.getElementById('ayarlarAc').addEventListener('click', function(e) {
+          e.preventDefault();
+          ayarlarFormuGoster();
+        });
+
+        document.getElementById('yardimAc').addEventListener('click', function(e) {
+          e.preventDefault();
+          Swal.fire({ title: 'Yardım', text: 'İletişim bölümünden bize ulaşın', icon: 'question', customClass: { popup: 'swal2-popup' }});
+        });
+
+</script>
+
+   </body>
+</html>
