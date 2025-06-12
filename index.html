@@ -1112,18 +1112,16 @@ let googleAuthInstance;
 let isGoogleApiLoaded = false; // API yükleme durumunu takip etmek için bir bayrak ekleyin
 
 function initGoogleAuth() {
-    // Hem 'client' (Drive API için) hem de 'auth2' (kimlik doğrulama için) modüllerini birlikte yükleyin
     gapi.load('client:auth2', () => {
         gapi.client.init({
-            // Firebase konfigürasyonunuzdaki API anahtarını kullanabilirsiniz (kimlik doğrulama için zorunlu değil ama iyi uygulama)
             apiKey: firebaseConfig.apiKey,
             clientId: '344034966705-8paqve5db6002isrh7ahjk6s2e1ps4ob.apps.googleusercontent.com',
-            // Drive API için discoveryDocs eklemek çok önemli
             discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
             scope: 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive.file'
         }).then(() => {
             googleAuthInstance = gapi.auth2.getAuthInstance();
-            isGoogleApiLoaded = true; // Tamamen yüklendiğinde bayrağı true yapın
+            isGoogleApiLoaded = true;
+            console.log("Google Auth ve Client başarıyla başlatıldı.");
         }).catch(err => {
             console.error("Google Auth veya Client başlatılamadı:", err);
             Swal.fire('Hata', 'Google hizmetleri başlatılamadı. Lütfen internet bağlantınızı kontrol edin veya sayfayı yenileyin.', 'error');
@@ -1131,23 +1129,25 @@ function initGoogleAuth() {
     });
 }
 
-// loadGoogleApi'nin doğru başlatmayı çağırdığından emin olun
+// Google API'sini yükleyen ana fonksiyon
 function loadGoogleApi() {
     const script = document.createElement("script");
     script.src = "https://apis.google.com/js/api.js";
     script.onload = () => {
-        // gapi.load, initGoogleAuth içinde çağrılacak, burada çağırmak güvenlidir
         initGoogleAuth();
+    };
+    script.onerror = (e) => {
+        console.error("Google API script yüklenirken hata oluştu:", e);
+        Swal.fire('Hata', 'Google API script yüklenemedi. İnternet bağlantınızı kontrol edin.', 'error');
     };
     document.head.appendChild(script);
 }
 
-// Pencere yüklendiğinde loadGoogleApi'yi çağırın
+// Pencere yüklendiğinde Google API'yi başlat
 window.onload = loadGoogleApi;
 
-
 function signInGoogle(callback) {
-    if (!isGoogleApiLoaded) { // Bayrağı kontrol edin, doğrudan googleAuthInstance'ı değil
+    if (!isGoogleApiLoaded) {
         Swal.fire('Hata', 'Google hizmetleri henüz yüklenmedi veya başlatılamadı. Lütfen sayfayı yenileyip tekrar deneyin.', 'error');
         return;
     }
@@ -1158,149 +1158,155 @@ function signInGoogle(callback) {
                 callback();
             })
             .catch(err => {
-                Swal.fire('Giriş Başarısız', 'Google hesabı ile oturum açılamadı. Hata: ' + err.details, 'error');
-                console.error(err);
+                console.error("Google oturum açma hatası:", err);
+                Swal.fire('Giriş Başarısız', 'Google hesabı ile oturum açılamadı. Detaylar için konsolu kontrol edin.', 'error');
             });
     } else {
         callback();
     }
 }
 
-
 function yedekleDrive() {
-  const user = firebase.auth().currentUser;
-  if (!user) return Swal.fire('Giriş gerekli', 'Lütfen önce uygulamaya giriş yapın.', 'warning');
+    const user = firebase.auth().currentUser;
+    if (!user) return Swal.fire('Giriş gerekli', 'Lütfen önce uygulamaya giriş yapın.', 'warning');
 
-  signInGoogle(() => {
-    Swal.fire({
-      title: 'Yedekleniyor...',
-      text: 'Verileriniz Google Drive\'a yükleniyor, lütfen bekleyin.',
-      allowOutsideClick: false,
-      didOpen: () => { Swal.showLoading(); }
+    signInGoogle(() => {
+        Swal.fire({
+            title: 'Yedekleniyor...',
+            text: 'Verileriniz Google Drive\'a yükleniyor, lütfen bekleyin.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        const kayitlarRef = firebase.database().ref('kayitlar/' + user.uid);
+        const notlarRef = firebase.database().ref('notlar/' + user.uid);
+
+        Promise.all([
+            kayitlarRef.once('value'),
+            notlarRef.once('value')
+        ]).then(snapshots => {
+            const backupData = {
+                kayitlar: snapshots[0].val() || {},
+                notlar: snapshots[1].val() || {}
+            };
+
+            const jsonBlob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+            const fileName = `NotUygulamasi_Yedek_${new Date().toISOString().split('T')[0]}.json`;
+
+            const metadata = {
+                'name': fileName,
+                'mimeType': 'application/json',
+                'parents': ['appDataFolder'] // Uygulama Veri Klasörüne yedekle
+            };
+
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', jsonBlob);
+
+            const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+
+            fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                body: form
+            }).then(res => {
+                if (res.ok) return res.json();
+                return res.text().then(text => { throw new Error('Yükleme başarısız: ' + text); });
+            }).then(() => {
+                Swal.fire('Başarılı', 'Yedek başarıyla Google Drive’a yüklendi.', 'success');
+            }).catch(error => {
+                Swal.fire('Hata', 'Yedekleme sırasında bir sorun oluştu.', 'error');
+                console.error("Yedekleme sırasında hata:", error);
+            });
+        }).catch(error => {
+            Swal.fire('Hata', 'Firebase verileri okunurken bir sorun oluştu.', 'error');
+            console.error("Firebase veri okuma hatası:", error);
+        });
     });
-
-    const kayitlarRef = firebase.database().ref('kayitlar/' + user.uid);
-    const notlarRef = firebase.database().ref('notlar/' + user.uid);
-
-    Promise.all([
-      kayitlarRef.once('value'),
-      notlarRef.once('value')
-    ]).then(snapshots => {
-      const backupData = {
-        kayitlar: snapshots[0].val() || {},
-        notlar: snapshots[1].val() || {}
-      };
-
-      const jsonBlob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
-      const fileName = `NotUygulamasi_Yedek_${new Date().toISOString().split('T')[0]}.json`;
-
-      const metadata = {
-        'name': fileName,
-        'mimeType': 'application/json',
-        'parents': ['appDataFolder']
-      };
-
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', jsonBlob);
-
-      const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
-
-      fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-        method: 'POST',
-        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-        body: form
-      }).then(res => {
-        if (res.ok) return res.json();
-        throw new Error('Yükleme başarısız.');
-      }).then(() => {
-        Swal.fire('Başarılı', 'Yedek başarıyla Google Drive’a yüklendi.', 'success');
-      }).catch(error => {
-        Swal.fire('Hata', 'Yedekleme sırasında bir sorun oluştu.', 'error');
-        console.error(error);
-      });
-    });
-  });
 }
 
 function driveYedektenYukle() {
-  const user = firebase.auth().currentUser;
-  if (!user) return Swal.fire('Giriş gerekli', 'Lütfen önce uygulamaya giriş yapın.', 'warning');
+    const user = firebase.auth().currentUser;
+    if (!user) return Swal.fire('Giriş gerekli', 'Lütfen önce uygulamaya giriş yapın.', 'warning');
 
-  signInGoogle(() => {
-    Swal.fire({
-      title: 'Yedek Aranıyor...',
-      text: 'Google Drive\'daki en son yedeğiniz aranıyor.',
-      allowOutsideClick: false,
-      didOpen: () => { Swal.showLoading(); }
-    });
-
-    const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
-
-    gapi.client.load('drive', 'v3', () => {
-      gapi.client.drive.files.list({
-        'q': 'name contains "NotUygulamasi_Yedek"',
-        'spaces': 'appDataFolder',
-        'fields': 'files(id, name)',
-        'orderBy': 'createdTime desc',
-        'pageSize': 1
-      }).then(res => {
-        const files = res.result.files;
-        if (!files || files.length === 0) {
-          return Swal.fire('Bulunamadı', 'Google Drive\'da uygulama yedeği bulunamadı.', 'info');
-        }
-
-        const fileId = files[0].id;
-
-        Swal.update({
-          title: 'Yedek İndiriliyor...',
-          text: 'Yedek dosyası indiriliyor ve verileriniz güncellenecek.'
-        });
-
-        return gapi.client.drive.files.get({
-          fileId: fileId,
-          alt: 'media'
-        });
-
-      }).then(res => {
-        if (!res) return;
-        const backupData = res.result;
+    signInGoogle(() => {
         Swal.fire({
-          title: 'Emin misiniz?',
-          text: "Mevcut verileriniz silinecek ve yedekten gelen verilerle değiştirilecek!",
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Evet, geri yükle!',
-          cancelButtonText: 'İptal'
-        }).then((result) => {
-          if (result.isConfirmed) {
-            const kayitlarRef = firebase.database().ref('kayitlar/' + user.uid);
-            const notlarRef = firebase.database().ref('notlar/' + user.uid);
-
-            Promise.all([
-              kayitlarRef.set(backupData.kayitlar || {}),
-              notlarRef.set(backupData.notlar || {})
-            ]).then(() => {
-              Swal.fire('Başarılı!', 'Verileriniz yedekten başarıyla geri yüklendi.', 'success');
-            }).catch(err => {
-              Swal.fire('Hata', 'Veriler geri yüklenirken bir sorun oluştu.', 'error');
-              console.error(err);
-            });
-          }
+            title: 'Yedek Aranıyor...',
+            text: 'Google Drive\'daki en son yedeğiniz aranıyor.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
         });
 
-      }).catch(err => {
-        console.error("Drive'dan yükleme hatası:", err);
-        Swal.fire('Hata', 'Yedek geri yüklenirken bir sorun oluştu.', 'error');
-      });
+        // gapi.client.load('drive', 'v3', callback) burada tekrar çağrılmasına gerek yok
+        // initGoogleAuth içinde zaten yüklendiği için doğrudan gapi.client.drive kullanılabilir
+
+        gapi.client.drive.files.list({
+            'q': 'name contains "NotUygulamasi_Yedek"',
+            'spaces': 'appDataFolder', // Sadece uygulama veri klasörünü ara
+            'fields': 'files(id, name, createdTime)',
+            'orderBy': 'createdTime desc', // En yeni yedeği bul
+            'pageSize': 1
+        }).then(res => {
+            const files = res.result.files;
+            if (!files || files.length === 0) {
+              return Swal.fire('Bulunamadı', 'Google Drive\'da uygulama yedeği bulunamadı.', 'info');
+            }
+
+            const fileId = files[0].id;
+
+            Swal.update({
+              title: 'Yedek İndiriliyor...',
+              text: 'Yedek dosyası indiriliyor ve verileriniz güncellenecek.'
+            });
+
+            return gapi.client.drive.files.get({
+              fileId: fileId,
+              alt: 'media' // Dosya içeriğini al
+            });
+
+        }).then(res => {
+            if (!res) return;
+            const backupData = res.result; // Geri yüklenen JSON verisi
+            Swal.fire({
+              title: 'Emin misiniz?',
+              text: "Mevcut verileriniz silinecek ve yedekten gelen verilerle değiştirilecek!",
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonText: 'Evet, geri yükle!',
+              cancelButtonText: 'İptal'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                const kayitlarRef = firebase.database().ref('kayitlar/' + user.uid);
+                const notlarRef = firebase.database().ref('notlar/' + user.uid);
+
+                // Mevcut verileri yedekten gelen verilerle değiştir
+                Promise.all([
+                  kayitlarRef.set(backupData.kayitlar || {}),
+                  notlarRef.set(backupData.notlar || {})
+                ]).then(() => {
+                  Swal.fire('Başarılı!', 'Verileriniz yedekten başarıyla geri yüklendi.', 'success');
+                  showContent(user.uid); // Listeyi güncelle
+                  notGetir(); // Notu da güncelle
+                }).catch(err => {
+                  Swal.fire('Hata', 'Veriler geri yüklenirken bir sorun oluştu.', 'error');
+                  console.error("Veri geri yükleme hatası:", err);
+                });
+              }
+            });
+
+        }).catch(err => {
+            console.error("Drive'dan yükleme hatası:", err);
+            Swal.fire('Hata', 'Yedek geri yüklenirken bir sorun oluştu. Detaylar için konsolu kontrol edin.', 'error');
+        });
     });
-  });
 }
- function handleClientLoad() {
-    initGoogleAuth(); // senin kullandığın fonksiyonla aynı işi yapsın
-  }
 
-
+// Bu fonksiyon doğrudan HTML'de çağrılmıyor, window.onload zaten loadGoogleApi'yi çağırıyor.
+// Eğer HTML'de "handleClientLoad()" diye bir çağrınız varsa, onu kaldırıp
+// sadece window.onload = loadGoogleApi; kalmalıdır.
+// function handleClientLoad() {
+//    initGoogleAuth();
+// }
 </script>
 
    </body>
