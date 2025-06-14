@@ -2090,6 +2090,11 @@ function yedekleDrive() {
         return;
     }
 
+    if (!GoogleAuth) {
+        Swal.fire('Google API henüz yüklenmedi.');
+        return;
+    }
+
     GoogleAuth.signIn().then(() => {
         const googleUser = GoogleAuth.currentUser.get();
         const accessToken = googleUser.getAuthResponse().access_token;
@@ -2119,19 +2124,25 @@ function yedekleDrive() {
                 method: 'POST',
                 headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
                 body: form
-            }).then(response => response.json())
-              .then(data => {
+            }).then(response => {
+                if (!response.ok) throw new Error("Google API hatası");
+                return response.json();
+            }).then(data => {
                 Swal.fire('✅ Google Drive’a başarıyla yüklendi!');
-              }).catch(err => {
+            }).catch(err => {
                 console.error("Yükleme hatası:", err);
                 Swal.fire('❌ Drive’a yüklenemedi!');
-              });
+            });
+        }).catch(error => {
+            console.error("Firebase veri çekme hatası:", error);
+            Swal.fire('Veriler alınırken hata oluştu.');
         });
     }).catch(error => {
         console.error("Google giriş hatası:", error);
         Swal.fire('Google hesabına giriş yapılamadı.');
     });
 }
+
 
 
        
